@@ -25,6 +25,7 @@ esa_adb_lite/
     visualization/              # Analysis and visual report scripts
   docs/
     data_preparation.md         # Data source and preparation
+    notebook_usage.md           # Notebook-first workflow
     project_structure.md        # File structure notes
 ```
 
@@ -120,6 +121,12 @@ Targeted run:
 ```
 
 Per-algorithm notebooks are in `notebooks/`. They call `run_benchmark.py`, so notebook and CLI experiments share the same implementation.
+
+Notebook usage guide:
+
+```text
+docs/notebook_usage.md
+```
 
 Regenerate notebooks:
 
@@ -221,15 +228,18 @@ Typical files:
 - `run.log`
 - `run_config.json`
 - `results.csv`
+- `slice_metrics.csv`
 - `summary_key_metrics.csv`
 - `summary_by_algorithm.csv`
 - `summary_by_algorithm_channel.csv`
+- `summary_slice_metrics.csv`
 
 Generated outputs are ignored by Git. Commit code, notebooks, and documentation only.
 
 ## Metrics
 
 - `metrics.py`: point-level and channel-mean metrics, plus dispatcher for optional metrics
+- `slice_metrics.py`: anomaly-type slice metrics by category, length, locality, dimensionality, class, duration, and affected-channel count
 - `vus_metrics.py`: lightweight VUS-PR/VUS-ROC for subsequence-aware evaluation
 - `official_metrics.py`: adapter for ESA official/event metrics when official dependencies are available
 
@@ -237,4 +247,19 @@ Recommended experiment view:
 
 ```text
 Point metrics -> channel means -> VUS interval metrics -> official ESA event metrics
+```
+
+Slice metrics are enabled by default and can be disabled with:
+
+```powershell
+--skip-slice-metrics
+```
+
+Summarize one or more slice metric files:
+
+```powershell
+..\.venv\Scripts\python.exe scripts\tools\summarize_slice_metrics.py `
+  results\<preset>\<timestamp>\slice_metrics.csv `
+  --metric Point_AUPR `
+  --output-dir results\slice_analysis
 ```

@@ -1,4 +1,4 @@
-# Project Structure
+# Project Structure / 项目结构
 
 ```text
 esa_adb_lite/
@@ -16,11 +16,13 @@ esa_adb_lite/
   docs/                         # Data and project documentation
 ```
 
-## Training/Benchmarking
+## Training/Benchmarking / 训练与评测
 
 Use `run_benchmark.py` or the notebooks in `notebooks/`.
 
-## Visualization
+中文：命令行使用 `run_benchmark.py`；交互式实验优先使用 `notebooks/`。
+
+## Visualization / 可视化
 
 Use scripts in `scripts/visualization/`:
 
@@ -28,14 +30,18 @@ Use scripts in `scripts/visualization/`:
 - `plot_anomaly_windows.py`: raw and z-score event window plots
 - `build_visual_report.py`: complete bilingual visual report
 
-## Utility Scripts
+中文：可视化脚本都在 `scripts/visualization/`，用于异常统计、事件窗口图和完整双语可视化报告。
+
+## Utility Scripts / 工具脚本
 
 Use scripts in `scripts/tools/`:
 
 - `check_data.py`: verify expected data layout
 - `make_algorithm_notebooks.py`: regenerate per-algorithm notebooks
 
-## AutoDL
+中文：工具脚本位于 `scripts/tools/`，用于检查数据和重新生成 notebook。
+
+## AutoDL / 云端运行
 
 Use scripts in `scripts/autodl/`:
 
