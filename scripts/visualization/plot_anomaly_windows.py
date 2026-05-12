@@ -156,6 +156,41 @@ def plot_event(df, labels, event, channels, output_path):
     plt.close(fig)
 
 
+def plot_event_zscore(df, labels, event, channels, output_path):
+    """Plot selected channels in one z-score panel for shape comparison."""
+    fig, ax = plt.subplots(figsize=(12, 4.8))
+    colors = ["#2f5d8c", "#2f8c5d", "#8c6d2f", "#7a4f9a", "#5c6f7c", "#b56b45"]
+    offsets = []
+    for i, channel in enumerate(channels):
+        values = df[channel].astype(float)
+        std = values.std()
+        z = (values - values.mean()) / (std if std else 1.0)
+        offset = i * 5.0
+        offsets.append(offset)
+        ax.plot(df["timestamp"], z + offset, linewidth=0.85, color=colors[i % len(colors)], label=channel)
+
+    event_labels = labels[labels["ID"] == event["ID"]]
+    for row in event_labels.itertuples():
+        if row.Channel not in channels:
+            continue
+        duration_seconds = (row.EndTime - row.StartTime).total_seconds()
+        if duration_seconds <= 1:
+            ax.axvline(row.StartTime, color="#8c1d18", linewidth=0.55, alpha=0.18, linestyle="--")
+            ax.scatter([row.StartTime], [max(offsets) + 2.2], marker="v", s=42,
+                       color="#8c1d18", edgecolor="white", linewidth=0.5, zorder=5)
+        else:
+            ax.axvspan(row.StartTime, row.EndTime, color="#d94841", alpha=0.14)
+
+    ax.set_title(event_title(event) + " | z-score overlay", fontsize=10)
+    ax.set_yticks(offsets, channels)
+    ax.grid(True, axis="x", linewidth=0.4, alpha=0.25)
+    ax.legend(loc="upper right", ncols=min(4, len(channels)), fontsize=8)
+    ax.xaxis.set_major_formatter(mdates.DateFormatter("%Y-%m-%d\n%H:%M"))
+    fig.tight_layout()
+    fig.savefig(output_path, dpi=160)
+    plt.close(fig)
+
+
 def main():
     args = parse_args()
     test_csv = Path(args.test_csv)
@@ -178,7 +213,9 @@ def main():
             continue
         safe_id = event["ID"].replace("/", "_")
         out = figures_dir / f"{safe_id}_{event['Category']}_{event['Length']}.png"
+        z_out = figures_dir / f"{safe_id}_{event['Category']}_{event['Length']}_zscore.png"
         plot_event(df, labels, event, channels, out)
+        plot_event_zscore(df, labels, event, channels, z_out)
         rows.append({
             "ID": event["ID"],
             "StartTime": event["StartTime"],
@@ -193,6 +230,7 @@ def main():
             "WindowStart": window_start,
             "WindowEnd": window_end,
             "Figure": str(out),
+            "ZScoreFigure": str(z_out),
             "RowsPlotted": len(df),
         })
 

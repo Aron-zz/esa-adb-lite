@@ -2,9 +2,19 @@
 """Build a compact visual report for ESA-ADB Mission1."""
 import argparse
 import json
+import sys
 from pathlib import Path
 
+import matplotlib
+
+matplotlib.use("Agg")
+import matplotlib.dates as mdates
+import matplotlib.pyplot as plt
 import pandas as pd
+
+SCRIPT_DIR = Path(__file__).resolve().parent
+if str(SCRIPT_DIR) not in sys.path:
+    sys.path.insert(0, str(SCRIPT_DIR))
 
 from analyze_anomaly_features import (
     duration_buckets,
@@ -19,6 +29,7 @@ from plot_anomaly_windows import (
     first_last_timestamp,
     load_metadata,
     plot_event,
+    plot_event_zscore,
 )
 
 
@@ -174,7 +185,93 @@ def create_overview(labels, output_dir):
     save_heatmap(events, "Dimensionality", "Locality", figures_dir / "dimensionality_by_locality_heatmap.png").to_csv(
         overview_dir / "dimensionality_by_locality.csv"
     )
+    create_detailed_overview_figures(labels, events, figures_dir, overview_dir)
     return events, distributions
+
+
+def create_detailed_overview_figures(labels, events, figures_dir, overview_dir):
+    events = events.copy()
+    labels = labels.copy()
+
+    monthly = events.set_index("StartTime").resample("ME").size().reset_index(name="EventCount")
+    monthly.to_csv(overview_dir / "monthly_event_counts.csv", index=False)
+    fig, ax = plt.subplots(figsize=(11, 3.8))
+    ax.plot(monthly["StartTime"], monthly["EventCount"], color="#2f5d8c", linewidth=1.4)
+    ax.fill_between(monthly["StartTime"], monthly["EventCount"], color="#2f5d8c", alpha=0.16)
+    ax.set_title("Monthly event count timeline")
+    ax.set_ylabel("Events")
+    ax.xaxis.set_major_formatter(mdates.DateFormatter("%Y-%m"))
+    fig.autofmt_xdate(rotation=30)
+    fig.tight_layout()
+    fig.savefig(figures_dir / "event_timeline_monthly.png", dpi=160)
+    plt.close(fig)
+
+    fig, ax = plt.subplots(figsize=(7.6, 5.2))
+    for category, group in events.groupby("Category"):
+        ax.scatter(group["ChannelCount"], group["DurationHours"], s=34, alpha=0.74, label=category)
+    ax.set_yscale("symlog", linthresh=1)
+    ax.set_xlabel("Affected channels per event")
+    ax.set_ylabel("Duration hours (symlog)")
+    ax.set_title("Event duration vs affected channels")
+    ax.legend(fontsize=8)
+    ax.grid(True, linewidth=0.35, alpha=0.3)
+    fig.tight_layout()
+    fig.savefig(figures_dir / "duration_vs_channel_count.png", dpi=160)
+    plt.close(fig)
+
+    for feature, filename in [
+        ("Category", "duration_by_category_boxplot.png"),
+        ("Length", "duration_by_length_boxplot.png"),
+        ("Class", "duration_by_class_boxplot.png"),
+    ]:
+        order = events[feature].fillna("Unknown").value_counts().index.tolist()
+        if feature == "Class":
+            order = order[:12]
+        data = [events.loc[events[feature].fillna("Unknown") == item, "DurationHours"] for item in order]
+        fig, ax = plt.subplots(figsize=(max(7.5, len(order) * 0.55), 4.8))
+        ax.boxplot(data, tick_labels=order, showfliers=False)
+        ax.set_yscale("symlog", linthresh=1)
+        ax.set_title(f"Duration by {feature}")
+        ax.set_ylabel("Duration hours (symlog)")
+        ax.tick_params(axis="x", rotation=30)
+        fig.tight_layout()
+        fig.savefig(figures_dir / filename, dpi=160)
+        plt.close(fig)
+
+    subsystem_category = pd.crosstab(labels["Subsystem"].fillna("Unknown"), labels["Category"].fillna("Unknown"))
+    subsystem_category.to_csv(overview_dir / "subsystem_by_category.csv")
+    fig, ax = plt.subplots(figsize=(8.5, max(4, len(subsystem_category) * 0.35)))
+    im = ax.imshow(subsystem_category.values, aspect="auto", cmap="YlGnBu")
+    ax.set_xticks(range(len(subsystem_category.columns)), subsystem_category.columns.astype(str), rotation=30, ha="right")
+    ax.set_yticks(range(len(subsystem_category.index)), subsystem_category.index.astype(str))
+    ax.set_title("Subsystem x Category label rows")
+    for i in range(subsystem_category.shape[0]):
+        for j in range(subsystem_category.shape[1]):
+            value = int(subsystem_category.values[i, j])
+            if value:
+                ax.text(j, i, str(value), ha="center", va="center", fontsize=7)
+    fig.colorbar(im, ax=ax, fraction=0.035, pad=0.04)
+    fig.tight_layout()
+    fig.savefig(figures_dir / "subsystem_by_category_heatmap.png", dpi=160)
+    plt.close(fig)
+
+    class_category = pd.crosstab(events["Class"].fillna("Unknown"), events["Category"].fillna("Unknown"))
+    class_category = class_category.loc[events["Class"].value_counts().head(14).index.intersection(class_category.index)]
+    class_category.to_csv(overview_dir / "class_by_category.csv")
+    fig, ax = plt.subplots(figsize=(8.2, max(4, len(class_category) * 0.35)))
+    im = ax.imshow(class_category.values, aspect="auto", cmap="Purples")
+    ax.set_xticks(range(len(class_category.columns)), class_category.columns.astype(str), rotation=30, ha="right")
+    ax.set_yticks(range(len(class_category.index)), class_category.index.astype(str))
+    ax.set_title("Class x Category events")
+    for i in range(class_category.shape[0]):
+        for j in range(class_category.shape[1]):
+            value = int(class_category.values[i, j])
+            if value:
+                ax.text(j, i, str(value), ha="center", va="center", fontsize=7)
+    fig.colorbar(im, ax=ax, fraction=0.035, pad=0.04)
+    fig.tight_layout()
+    fig.savefig(figures_dir / "class_by_category_heatmap.png", dpi=160)
+    plt.close(fig)
 
 
 def create_result_chart(results_csv, output_dir):
@@ -254,8 +351,11 @@ def create_event_plots(test_csv, mission_root, events, output_dir, args):
         if df.empty:
             continue
         filename = f"{event['ID']}_{event['Category']}_{event['Length']}.png"
+        z_filename = f"{event['ID']}_{event['Category']}_{event['Length']}_zscore.png"
         out = figures_dir / filename
+        z_out = figures_dir / z_filename
         plot_event(df, labels_raw, event, channels, out)
+        plot_event_zscore(df, labels_raw, event, channels, z_out)
         index_rows.append({
             "ID": event["ID"],
             "Category": event["Category"],
@@ -268,6 +368,7 @@ def create_event_plots(test_csv, mission_root, events, output_dir, args):
             "WindowStart": spec["window_start"],
             "WindowEnd": spec["window_end"],
             "Figure": f"02_representative_events/figures/{filename}",
+            "ZScoreFigure": f"02_representative_events/figures/{z_filename}",
             "RowsPlotted": len(df),
         })
     index = pd.DataFrame(index_rows)
@@ -321,13 +422,21 @@ def write_report_en(output_dir, preprocessed_summary, value_cols, label_cols, ev
         "- `01_dataset_overview/figures/length_distribution.png`",
         "- `01_dataset_overview/figures/dimensionality_by_locality_heatmap.png`",
         "- `01_dataset_overview/figures/duration_bucket_distribution.png`",
+        "- `01_dataset_overview/figures/event_timeline_monthly.png`",
+        "- `01_dataset_overview/figures/duration_vs_channel_count.png`",
+        "- `01_dataset_overview/figures/duration_by_category_boxplot.png`",
+        "- `01_dataset_overview/figures/subsystem_by_category_heatmap.png`",
+        "- `01_dataset_overview/figures/class_by_category_heatmap.png`",
         "- `02_representative_events/figures/*.png`",
         "",
         "## Representative Events",
         "",
     ])
     for row in plot_index.itertuples(index=False):
-        lines.append(f"- `{row.ID}`: {row.Category}, {row.Dimensionality}, {row.Locality}, {row.Length}, {row.Class}, `{row.Figure}`")
+        lines.append(
+            f"- `{row.ID}`: {row.Category}, {row.Dimensionality}, {row.Locality}, "
+            f"{row.Length}, {row.Class}, `{row.Figure}`, `{row.ZScoreFigure}`"
+        )
 
     if result_metric:
         lines.extend([
@@ -392,6 +501,11 @@ def write_report_zh(output_dir, preprocessed_summary, value_cols, label_cols, ev
         "- `01_dataset_overview/figures/length_distribution.png`: 点异常/子序列异常分布",
         "- `01_dataset_overview/figures/dimensionality_by_locality_heatmap.png`: 维度类型 x 局部/全局热力图",
         "- `01_dataset_overview/figures/duration_bucket_distribution.png`: 事件持续时间分桶",
+        "- `01_dataset_overview/figures/event_timeline_monthly.png`: 月度异常事件时间线",
+        "- `01_dataset_overview/figures/duration_vs_channel_count.png`: 持续时间与受影响通道数散点图",
+        "- `01_dataset_overview/figures/duration_by_category_boxplot.png`: 不同类别的持续时间箱线图",
+        "- `01_dataset_overview/figures/subsystem_by_category_heatmap.png`: 子系统 x 异常类别热力图",
+        "- `01_dataset_overview/figures/class_by_category_heatmap.png`: 异常类别编号 x 异常类别热力图",
         "- `02_representative_events/figures/*.png`: 代表性异常事件时序窗口图",
         "",
         "## 代表性事件",
@@ -400,7 +514,7 @@ def write_report_zh(output_dir, preprocessed_summary, value_cols, label_cols, ev
     for row in plot_index.itertuples(index=False):
         lines.append(
             f"- `{row.ID}`: {row.Category}, {row.Dimensionality}, {row.Locality}, "
-            f"{row.Length}, {row.Class}, `{row.Figure}`"
+            f"{row.Length}, {row.Class}, `{row.Figure}`, `{row.ZScoreFigure}`"
         )
 
     if result_metric:
