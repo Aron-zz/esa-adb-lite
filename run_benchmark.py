@@ -42,6 +42,11 @@ PRESETS = {
         "channel_groups": ["target", "subset"],
         "algorithms": ["PCC", "HBOS", "STD", "iForest", "COPOD", "RobustPCA"],
     },
+    "official": {
+        "datasets": TRAIN_NAMES,
+        "channel_groups": ["target", "subset"],
+        "algorithms": ["PCC", "HBOS", "STD3", "STD5", "iForest", "Subsequence_IF", "KNN"],
+    },
     "full": {
         "datasets": TRAIN_NAMES,
         "channel_groups": ["target", "subset"],
@@ -122,9 +127,12 @@ def parse_args():
     )
     parser.add_argument(
         "--preset",
-        choices=["smoke", "light", "extended", "full"],
+        choices=["smoke", "light", "extended", "official", "full"],
         default="full",
-        help="smoke: 最小验证；light: 4 个轻量算法；extended: 加入轻量扩展算法；full: 全部经典算法",
+        help=(
+            "smoke: 最小验证；light: 4 个轻量算法；extended: 加入轻量扩展算法；"
+            "official: 对齐 ESA-ADB Mission1 classical；full: 全部经典算法"
+        ),
     )
     parser.add_argument(
         "--datasets",

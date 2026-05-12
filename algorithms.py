@@ -50,6 +50,16 @@ def std(X_train, X_test, tol=3.0, random_state=42):
     return ((X_test > mean + tol * stdv) | (X_test < mean - tol * stdv)).astype(np.float64)
 
 
+def std3(X_train, X_test, random_state=42):
+    """Official Mission1 STD baseline with tolerance 3."""
+    return std(X_train, X_test, tol=3.0, random_state=random_state)
+
+
+def std5(X_train, X_test, random_state=42):
+    """Official Mission1 STD baseline with tolerance 5."""
+    return std(X_train, X_test, tol=5.0, random_state=random_state)
+
+
 def _train_stats_from_nominal(X_train, y_train=None):
     if y_train is None:
         mean = np.mean(X_train, axis=0)
@@ -210,7 +220,9 @@ def subsequence_knn(X_train, X_test, window_size=17, n_neighbors=5, max_train_wi
 ALGORITHMS = {
     "PCC": pcc,
     "HBOS": hbos,
-    "STD": std,
+    "STD": std3,
+    "STD3": std3,
+    "STD5": std5,
     "iForest": iforest,
     "LOF": lof,
     "COPOD": copod,

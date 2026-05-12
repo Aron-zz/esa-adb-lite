@@ -13,7 +13,7 @@ esa_adb_lite/
     autodl/                     # AutoDL setup/run helpers
     tools/                      # Utility scripts
     visualization/              # Visual analysis and report scripts
-  docs/                         # Data and project documentation
+  docs/                         # Data, alignment, and project documentation
 ```
 
 ## Training/Benchmarking / 训练与评测

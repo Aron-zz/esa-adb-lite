@@ -18,7 +18,9 @@ EN: Keep algorithm implementations in `algorithms.py`; use notebooks for interac
 
 - [PCC](PCC.ipynb): Fast PCA reconstruction-error baseline. / 快速 PCA 重构误差基线。
 - [HBOS](HBOS.ipynb): Fast per-channel histogram outlier score baseline. / 快速逐通道直方图异常分数基线。
-- [STD](STD.ipynb): Fast mean/std threshold baseline. / 快速均值/标准差阈值基线。
+- [STD](STD.ipynb): Compatibility alias for the official STD3 baseline. / 兼容入口，等价于官方 STD3 基线。
+- [STD3](STD3.ipynb): Official mean/std threshold baseline with tolerance 3. / 官方均值/标准差阈值基线，容差为 3。
+- [STD5](STD5.ipynb): Official mean/std threshold baseline with tolerance 5. / 官方均值/标准差阈值基线，容差为 5。
 - [iForest](iForest.ipynb): Strong per-channel Isolation Forest baseline; slower on target channels. / 较强的逐通道 Isolation Forest 基线；target 通道组上较慢。
 - [COPOD](COPOD.ipynb): Fast empirical-tail-probability baseline; promising in subset experiments. / 快速经验尾概率基线；subset 实验表现有潜力。
 - [RobustPCA](RobustPCA.ipynb): Robust-scaled PCA reconstruction-error baseline. / 鲁棒缩放后的 PCA 重构误差基线。

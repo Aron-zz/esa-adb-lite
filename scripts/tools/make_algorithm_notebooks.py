@@ -7,7 +7,9 @@ from pathlib import Path
 ALGORITHMS = [
     ("PCC", "Fast PCA reconstruction-error baseline.", "快速 PCA 重构误差基线。"),
     ("HBOS", "Fast per-channel histogram outlier score baseline.", "快速逐通道直方图异常分数基线。"),
-    ("STD", "Fast mean/std threshold baseline.", "快速均值/标准差阈值基线。"),
+    ("STD", "Compatibility alias for the official STD3 baseline.", "兼容入口，等价于官方 STD3 基线。"),
+    ("STD3", "Official mean/std threshold baseline with tolerance 3.", "官方均值/标准差阈值基线，容差为 3。"),
+    ("STD5", "Official mean/std threshold baseline with tolerance 5.", "官方均值/标准差阈值基线，容差为 5。"),
     ("iForest", "Strong per-channel Isolation Forest baseline; slower on target channels.", "较强的逐通道 Isolation Forest 基线；target 通道组上较慢。"),
     ("COPOD", "Fast empirical-tail-probability baseline; promising in subset experiments.", "快速经验尾概率基线；subset 实验表现有潜力。"),
     ("RobustPCA", "Robust-scaled PCA reconstruction-error baseline.", "鲁棒缩放后的 PCA 重构误差基线。"),
@@ -87,6 +89,8 @@ SKIP_SLICE_METRICS = False
 # Local quick check / 本机快速验证:
 # DATASETS = ["3_months"]; CHANNEL_GROUPS = ["subset"]; INCLUDE_VUS = False
 # Cloud subset formal / 云端 subset 正式:
+# DATASETS = ["3_months", "10_months", "21_months", "42_months", "84_months"]; CHANNEL_GROUPS = ["subset"]; INCLUDE_VUS = True
+# Cloud official classical alignment / 云端官方 classical 对齐:
 # DATASETS = ["3_months", "10_months", "21_months", "42_months", "84_months"]; CHANNEL_GROUPS = ["subset"]; INCLUDE_VUS = True
 # Cloud target missing algorithms / 云端 target 补跑:
 # DATASETS = ["3_months", "10_months", "21_months", "42_months", "84_months"]; CHANNEL_GROUPS = ["target"]; INCLUDE_VUS = True

@@ -25,6 +25,7 @@ esa_adb_lite/
     visualization/              # Analysis and visual report scripts
   docs/
     data_preparation.md         # Data source and preparation
+    algorithm_alignment.md      # Official ESA-ADB classical alignment
     notebook_usage.md           # Notebook-first workflow
     project_structure.md        # File structure notes
 ```
@@ -38,11 +39,17 @@ esa_adb_lite/
   - `subset`: `channel_41` to `channel_46`
   - `target`: official 57 target channels
 - Algorithms:
-  - `PCC`, `HBOS`, `STD`, `iForest`
+  - `PCC`, `HBOS`, `STD`, `STD3`, `STD5`, `iForest`
   - `COPOD`, `RobustPCA`
   - `LOF`, `KNN`, `Subsequence_IF`, `Subsequence_KNN`
 
 `LOF`, `KNN`, `Subsequence_IF`, and `Subsequence_KNN` are available but computationally heavy on the full ESA test split. Prefer explicit targeted or AutoDL runs for them.
+
+For official ESA-ADB Mission1 classical alignment, see [docs/algorithm_alignment.md](docs/algorithm_alignment.md). The `official` preset runs:
+
+```text
+PCC, HBOS, STD3, STD5, iForest, Subsequence_IF, KNN
+```
 
 ## Data
 
@@ -108,6 +115,19 @@ Extended benchmark:
 
 ```powershell
 ..\.venv\Scripts\python.exe run_benchmark.py ..\data\preprocessed --preset extended --skip-official-metrics
+```
+
+Official-aligned classical benchmark:
+
+```powershell
+..\.venv\Scripts\python.exe run_benchmark.py ..\data\preprocessed `
+  --preset official `
+  --channel-groups subset `
+  --skip-official-metrics `
+  --include-vus-metrics `
+  --vus-max-points 50000 `
+  --vus-max-buffer 50 `
+  --vus-max-thresholds 30
 ```
 
 Targeted run:
@@ -191,6 +211,20 @@ Recommended extended run:
 ```bash
 python run_benchmark.py /root/autodl-tmp/data/preprocessed \
   --preset extended \
+  --output-dir /root/autodl-tmp/results_autodl \
+  --channel-groups subset \
+  --skip-official-metrics \
+  --include-vus-metrics \
+  --vus-max-points 50000 \
+  --vus-max-buffer 50 \
+  --vus-max-thresholds 30
+```
+
+Official-aligned classical subset run:
+
+```bash
+python run_benchmark.py /root/autodl-tmp/data/preprocessed \
+  --preset official \
   --output-dir /root/autodl-tmp/results_autodl \
   --channel-groups subset \
   --skip-official-metrics \

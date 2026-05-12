@@ -98,3 +98,25 @@ Important files:
 Keep `SKIP_OFFICIAL_METRICS = True` for normal notebook experiments unless the official affiliation metric dependency is installed.
 
 中文：常规 notebook 实验建议保持 `SKIP_OFFICIAL_METRICS = True`。只有当官方 affiliation 指标依赖已经配置好时，再打开官方指标。
+
+## Official Alignment / 官方算法对齐
+
+The official ESA-ADB Mission1 classical set is documented in:
+
+```text
+docs/algorithm_alignment.md
+```
+
+中文：官方 ESA-ADB Mission1 classical 算法组的对齐关系见：
+
+```text
+docs/algorithm_alignment.md
+```
+
+In notebooks, run these algorithms for an official-aligned classical comparison:
+
+```text
+PCC, HBOS, STD3, STD5, iForest, Subsequence_IF, KNN
+```
+
+中文：如果使用 notebook 逐算法运行，官方对齐实验需要跑以上这些算法。`STD` 是兼容入口，等价于 `STD3`。
