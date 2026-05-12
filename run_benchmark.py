@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""ESA-ADB 轻量化基准测试：6 算法 × 5 数据集 × 2 通道组 = 60 实验。"""
+"""ESA-ADB 轻量化基准测试。"""
 import argparse
 import gc
 import inspect
@@ -35,6 +35,11 @@ PRESETS = {
         "datasets": TRAIN_NAMES,
         "channel_groups": ["target", "subset"],
         "algorithms": ["PCC", "HBOS", "STD", "iForest"],
+    },
+    "extended": {
+        "datasets": TRAIN_NAMES,
+        "channel_groups": ["target", "subset"],
+        "algorithms": ["PCC", "HBOS", "STD", "iForest", "COPOD", "RobustPCA"],
     },
     "full": {
         "datasets": TRAIN_NAMES,
@@ -116,9 +121,9 @@ def parse_args():
     )
     parser.add_argument(
         "--preset",
-        choices=["smoke", "light", "full"],
+        choices=["smoke", "light", "extended", "full"],
         default="full",
-        help="smoke: 最小验证；light: 4 个轻量算法；full: 全部 6 个经典算法",
+        help="smoke: 最小验证；light: 4 个轻量算法；extended: 加入轻量扩展算法；full: 全部经典算法",
     )
     parser.add_argument(
         "--datasets",

@@ -4,4 +4,4 @@ __pycache__/
 logs/
 results/
 benchmark_results_*.csv
-
+*.zip
