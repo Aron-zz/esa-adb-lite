@@ -29,6 +29,8 @@ Use scripts in `scripts/visualization/`:
 - `analyze_anomaly_features.py`: anomaly feature distributions and summary figures
 - `plot_anomaly_windows.py`: raw and z-score event window plots
 - `build_visual_report.py`: complete bilingual visual report
+- `plot_benchmark_report.py`: benchmark summary figures for slides
+- `make_ppt_flowcharts.py`: Chinese SVG flowcharts for presentation
 
 中文：可视化脚本都在 `scripts/visualization/`，用于异常统计、事件窗口图和完整双语可视化报告。
 
@@ -38,6 +40,7 @@ Use scripts in `scripts/tools/`:
 
 - `check_data.py`: verify expected data layout
 - `make_algorithm_notebooks.py`: regenerate per-algorithm notebooks
+- `rank_slice_algorithms.py`: rank algorithms within anomaly-feature slices
 
 中文：工具脚本位于 `scripts/tools/`，用于检查数据和重新生成 notebook。
 
@@ -47,3 +50,4 @@ Use scripts in `scripts/autodl/`:
 
 - `autodl_setup.sh`
 - `run_autodl_light.sh`
+- `run_autodl_all.sh`

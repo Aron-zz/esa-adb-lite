@@ -47,6 +47,11 @@ PRESETS = {
         "channel_groups": ["target", "subset"],
         "algorithms": ["PCC", "HBOS", "STD3", "STD5", "iForest", "Subsequence_IF", "KNN"],
     },
+    "all": {
+        "datasets": TRAIN_NAMES,
+        "channel_groups": ["target", "subset"],
+        "algorithms": None,
+    },
     "full": {
         "datasets": TRAIN_NAMES,
         "channel_groups": ["target", "subset"],
@@ -127,11 +132,11 @@ def parse_args():
     )
     parser.add_argument(
         "--preset",
-        choices=["smoke", "light", "extended", "official", "full"],
+        choices=["smoke", "light", "extended", "official", "all", "full"],
         default="full",
         help=(
             "smoke: 最小验证；light: 4 个轻量算法；extended: 加入轻量扩展算法；"
-            "official: 对齐 ESA-ADB Mission1 classical；full: 全部经典算法"
+            "official: 对齐 ESA-ADB Mission1 classical；all/full: 全部已实现算法"
         ),
     )
     parser.add_argument(
@@ -160,6 +165,24 @@ def parse_args():
         "--skip-official-metrics",
         action="store_true",
         help="只计算点级指标，跳过 ESA 官方事件指标",
+    )
+    parser.add_argument(
+        "--official-binary-fraction",
+        type=float,
+        default=0.05,
+        help="官方事件指标使用的 top fraction 二值化比例，默认 0.05 表示每通道 top 5% 分数为异常",
+    )
+    parser.add_argument(
+        "--official-merge-gap-points",
+        type=int,
+        default=0,
+        help="官方事件指标二值化后，合并相邻预测事件的最大间隔点数；默认 0 表示不合并",
+    )
+    parser.add_argument(
+        "--official-min-event-points",
+        type=int,
+        default=1,
+        help="官方事件指标二值化后，保留预测事件的最小长度点数；默认 1",
     )
     parser.add_argument(
         "--include-vus-metrics",
@@ -234,6 +257,9 @@ def write_run_config(run_dir, args, datasets, channel_groups, selected_algorithm
         "channel_groups": [label for label, _ in channel_groups],
         "algorithms": list(selected_algorithms),
         "include_official_metrics": not args.skip_official_metrics,
+        "official_binary_fraction": args.official_binary_fraction,
+        "official_merge_gap_points": args.official_merge_gap_points,
+        "official_min_event_points": args.official_min_event_points,
         "include_slice_metrics": not args.skip_slice_metrics,
         "include_vus_metrics": args.include_vus_metrics,
         "vus": {
@@ -252,6 +278,12 @@ def write_run_config(run_dir, args, datasets, channel_groups, selected_algorithm
 
 def main():
     args = parse_args()
+    if not 0 < args.official_binary_fraction < 1:
+        raise ValueError("--official-binary-fraction must be between 0 and 1")
+    if args.official_merge_gap_points < 0:
+        raise ValueError("--official-merge-gap-points must be >= 0")
+    if args.official_min_event_points < 1:
+        raise ValueError("--official-min-event-points must be >= 1")
     selected_datasets = resolve_datasets(args)
     selected_channel_groups = resolve_channel_groups(args)
     selected_algorithms = resolve_algorithms(args)
@@ -278,6 +310,13 @@ def main():
     logging.info(f"数据集: {', '.join(selected_datasets)}")
     logging.info(f"通道组: {', '.join(config['channel_groups'])}")
     logging.info(f"官方事件指标: {'ON' if not args.skip_official_metrics else 'OFF'}")
+    if not args.skip_official_metrics:
+        logging.info(f"官方事件指标二值化比例: top {args.official_binary_fraction:.2%}")
+        logging.info(
+            "官方事件指标事件后处理: merge_gap_points=%s, min_event_points=%s",
+            args.official_merge_gap_points,
+            args.official_min_event_points,
+        )
     logging.info(f"VUS 指标: {'ON' if args.include_vus_metrics else 'OFF'}")
     logging.info("=" * 50)
 
@@ -354,6 +393,9 @@ def main():
                         test_data_scores=test_data_scores,
                         subsystems_mapping=subsystems_mapping,
                         include_official=not args.skip_official_metrics,
+                        official_binary_fraction=args.official_binary_fraction,
+                        official_merge_gap_points=args.official_merge_gap_points,
+                        official_min_event_points=args.official_min_event_points,
                         include_vus=args.include_vus_metrics,
                         vus_config=VUSConfig(
                             max_buffer_size=args.vus_max_buffer,

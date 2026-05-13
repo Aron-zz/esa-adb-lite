@@ -14,7 +14,13 @@ AFFILIATION_REPO = Path(__file__).resolve().parents[1] / "esa-adb-classical" / "
 if str(AFFILIATION_REPO) not in sys.path:
     sys.path.insert(0, str(AFFILIATION_REPO))
 
-from affiliation import pr_from_events  # type: ignore
+try:
+    from affiliation import pr_from_events  # type: ignore
+except ModuleNotFoundError as exc:
+    pr_from_events = None
+    AFFILIATION_IMPORT_ERROR = exc
+else:
+    AFFILIATION_IMPORT_ERROR = None
 
 
 NANOSECONDS_IN_MILLISECOND = 1e6
@@ -87,6 +93,41 @@ def topk_binarize(y_scores, fraction=0.05):
         threshold = np.partition(col, len(col) - n_anom)[len(col) - n_anom]
         binary[:, i] = (col >= threshold).astype(np.uint8)
     return binary
+
+
+def postprocess_binary_events(y_binary, merge_gap_points=0, min_event_points=1):
+    """Merge nearby binary detections and optionally remove very short events."""
+    binary = np.asarray(y_binary, dtype=np.uint8).copy()
+    if binary.ndim == 1:
+        binary = np.expand_dims(binary, -1)
+
+    merge_gap_points = max(0, int(merge_gap_points or 0))
+    min_event_points = max(1, int(min_event_points or 1))
+    if merge_gap_points == 0 and min_event_points <= 1:
+        return binary
+
+    out = np.zeros_like(binary, dtype=np.uint8)
+    for i in range(binary.shape[1]):
+        col = binary[:, i]
+        idx = np.flatnonzero(col)
+        if idx.size == 0:
+            continue
+
+        start = prev = int(idx[0])
+        events = []
+        for pos in idx[1:]:
+            pos = int(pos)
+            if pos - prev <= merge_gap_points + 1:
+                prev = pos
+            else:
+                events.append((start, prev))
+                start = prev = pos
+        events.append((start, prev))
+
+        for start, end in events:
+            if end - start + 1 >= min_event_points:
+                out[start:end + 1, i] = 1
+    return out
 
 
 def make_time_series(timestamps, values):
@@ -433,10 +474,33 @@ class ChannelAwareFScoreLite:
         return result
 
 
-def evaluate_official_metrics(labels_df, test_data_scores, subsystems_mapping, timestamps, channel_names, y_scores, binary_fraction=0.05):
+def evaluate_official_metrics(
+    labels_df,
+    test_data_scores,
+    subsystems_mapping,
+    timestamps,
+    channel_names,
+    y_scores,
+    binary_fraction=0.05,
+    merge_gap_points=0,
+    min_event_points=1,
+):
+    if pr_from_events is None:
+        raise ModuleNotFoundError(
+            "Official ESA affiliation metrics are not available. "
+            f"Expected the official repository at {AFFILIATION_REPO}. "
+            "Clone https://github.com/kplabs-pl/ESA-ADB.git as a sibling directory named "
+            "'esa-adb-classical', or run with --skip-official-metrics."
+        ) from AFFILIATION_IMPORT_ERROR
+
     timestamps = pd.to_datetime(timestamps)
     y_scores = scale_scores(y_scores)
     y_binary = topk_binarize(y_scores, fraction=binary_fraction)
+    y_binary = postprocess_binary_events(
+        y_binary,
+        merge_gap_points=merge_gap_points,
+        min_event_points=min_event_points,
+    )
     if y_binary.ndim == 1:
         y_binary = np.expand_dims(y_binary, -1)
 

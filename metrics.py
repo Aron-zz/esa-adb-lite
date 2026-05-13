@@ -56,6 +56,9 @@ def evaluate(
     test_data_scores=None,
     subsystems_mapping=None,
     include_official=True,
+    official_binary_fraction=0.05,
+    official_merge_gap_points=0,
+    official_min_event_points=1,
     include_vus=False,
     vus_config=None,
 ):
@@ -96,6 +99,9 @@ def evaluate(
                 timestamps=timestamps,
                 channel_names=channel_names,
                 y_scores=y_scores_2d,
+                binary_fraction=official_binary_fraction,
+                merge_gap_points=official_merge_gap_points,
+                min_event_points=official_min_event_points,
             )
         )
 

@@ -7,7 +7,18 @@ import matplotlib
 
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
+import numpy as np
 import pandas as pd
+
+plt.rcParams.update({
+    "font.size": 20,
+    "axes.titlesize": 26,
+    "axes.labelsize": 22,
+    "xtick.labelsize": 19,
+    "ytick.labelsize": 19,
+    "legend.fontsize": 19,
+    "figure.titlesize": 27,
+})
 
 
 FEATURE_COLUMNS = ["Category", "Dimensionality", "Locality", "Length", "Class", "Subclass"]
@@ -105,38 +116,97 @@ def ensure_dir(path):
 
 def save_bar(df, x_col, y_col, title, path, *, horizontal=False, top_n=None):
     data = df.head(top_n).copy() if top_n else df.copy()
-    plt.figure(figsize=(10, max(4, min(8, len(data) * 0.45))) if horizontal else (8, 4.5))
+    fig, ax = plt.subplots(
+        figsize=(15.5, max(7.0, min(12, len(data) * 0.78))) if horizontal else (15.5, 8.2)
+    )
     if horizontal:
-        plt.barh(data[x_col].astype(str), data[y_col])
-        plt.gca().invert_yaxis()
-        plt.xlabel(y_col)
+        ax.barh(data[x_col].astype(str), data[y_col], height=0.46, color="#2f6f8f", alpha=0.9)
+        ax.invert_yaxis()
+        ax.set_xlabel(y_col)
+        for i, value in enumerate(data[y_col]):
+            ax.text(value, i, f" {int(value)}", va="center", fontsize=22)
     else:
-        plt.bar(data[x_col].astype(str), data[y_col])
-        plt.ylabel(y_col)
-        plt.xticks(rotation=30, ha="right")
-    plt.title(title)
-    plt.tight_layout()
-    plt.savefig(path, dpi=160)
-    plt.close()
+        x = range(len(data))
+        ax.bar(x, data[y_col], width=0.46, color="#2f6f8f", alpha=0.9)
+        ax.set_xticks(list(x), data[x_col].astype(str), rotation=24, ha="right")
+        ax.set_ylabel(y_col)
+        for i, value in enumerate(data[y_col]):
+            ax.text(i, value, f"{int(value)}", ha="center", va="bottom", fontsize=22)
+    ax.set_title(title)
+    ax.grid(axis="y" if not horizontal else "x", alpha=0.22, linewidth=0.7)
+    fig.tight_layout()
+    fig.savefig(path, dpi=240)
+    plt.close(fig)
 
 
 def save_heatmap(events, row_feature, col_feature, path):
     table = pd.crosstab(events[row_feature].fillna("Unknown"), events[col_feature].fillna("Unknown"))
-    fig, ax = plt.subplots(figsize=(8, max(4, len(table) * 0.45)))
+    fig, ax = plt.subplots(figsize=(14.5, max(7.0, len(table) * 0.86)))
     im = ax.imshow(table.values, aspect="auto", cmap="Blues")
-    ax.set_xticks(range(len(table.columns)), table.columns.astype(str), rotation=30, ha="right")
+    ax.set_xticks(range(len(table.columns)), table.columns.astype(str), rotation=24, ha="right")
     ax.set_yticks(range(len(table.index)), table.index.astype(str))
     ax.set_title(f"{row_feature} x {col_feature}")
     for i in range(table.shape[0]):
         for j in range(table.shape[1]):
             value = int(table.values[i, j])
             if value:
-                ax.text(j, i, str(value), ha="center", va="center", fontsize=8)
+                ax.text(j, i, str(value), ha="center", va="center", fontsize=22)
     fig.colorbar(im, ax=ax, fraction=0.035, pad=0.04)
     fig.tight_layout()
-    fig.savefig(path, dpi=160)
+    fig.savefig(path, dpi=240)
     plt.close(fig)
     return table
+
+
+def save_distribution_dashboard(distributions, buckets, path, top_classes=8):
+    panels = [
+        ("Category", distributions[distributions["Feature"] == "Category"], "Category"),
+        ("Length", distributions[distributions["Feature"] == "Length"], "Length"),
+        ("Dimensionality", distributions[distributions["Feature"] == "Dimensionality"], "Dimensionality"),
+        ("Locality", distributions[distributions["Feature"] == "Locality"], "Locality"),
+        ("Duration", buckets.rename(columns={"DurationBucket": "Value"}), "DurationBucket"),
+        (
+            "Top Classes",
+            distributions[distributions["Feature"] == "Class"].head(top_classes),
+            "Class",
+        ),
+    ]
+    fig, axes = plt.subplots(2, 3, figsize=(24, 13))
+    axes = axes.ravel()
+    color = "#2f6f8f"
+
+    for ax, (title, data, x_label) in zip(axes, panels):
+        data = data.copy()
+        values = data["EventCount"].astype(float)
+        ax.set_title(title)
+        if title == "Top Classes":
+            y = np.arange(len(data))
+            ax.barh(y, values, height=0.5, color=color, alpha=0.9)
+            ax.set_yticks(y, data["Value"].astype(str))
+            ax.invert_yaxis()
+            ax.set_xlabel("Events")
+            ax.set_ylabel("")
+            ax.grid(axis="x", alpha=0.22, linewidth=0.7)
+            upper = max(values.max() * 1.2, values.max() + 1)
+            ax.set_xlim(0, upper)
+            for i, value in enumerate(values):
+                ax.text(value, i, f" {int(value)}", va="center", fontsize=20)
+        else:
+            x = np.arange(len(data))
+            ax.bar(x, values, width=0.46, color=color, alpha=0.9)
+            ax.set_ylabel("Events")
+            ax.set_xticks(x, data["Value"].astype(str), rotation=22, ha="right")
+            ax.grid(axis="y", alpha=0.22, linewidth=0.7)
+            upper = max(values.max() * 1.18, values.max() + 1)
+            ax.set_ylim(0, upper)
+            for i, value in enumerate(values):
+                ax.text(i, value, f"{int(value)}", ha="center", va="bottom", fontsize=20)
+            ax.set_xlabel(x_label)
+
+    fig.suptitle("ESA-ADB Mission1 Anomaly Feature Distributions", y=0.995)
+    fig.tight_layout(rect=[0, 0, 1, 0.97])
+    fig.savefig(path, dpi=240)
+    plt.close(fig)
 
 
 def save_results_charts(results_csv, figures_dir):
@@ -151,14 +221,14 @@ def save_results_charts(results_csv, figures_dir):
         return None
     summary = df.groupby(["algorithm", "channels"], dropna=False)[metric].mean().reset_index()
     pivot = summary.pivot(index="algorithm", columns="channels", values=metric)
-    ax = pivot.plot(kind="bar", figsize=(8, 4.5))
+    ax = pivot.plot(kind="bar", figsize=(15.5, 8.2), width=0.52)
     ax.set_title(f"Overall benchmark mean {metric}")
     ax.set_ylabel(metric)
     ax.set_xlabel("")
     plt.xticks(rotation=20, ha="right")
     plt.tight_layout()
     out = figures_dir / "overall_algorithm_metric.png"
-    plt.savefig(out, dpi=160)
+    plt.savefig(out, dpi=240)
     plt.close()
     return summary
 
@@ -308,6 +378,12 @@ def main():
         "EventCount",
         "Event duration buckets",
         figures_dir / "duration_bucket_distribution.png",
+    )
+    save_distribution_dashboard(
+        distributions,
+        buckets,
+        figures_dir / "anomaly_feature_distribution_dashboard.png",
+        top_classes=args.top_classes,
     )
     save_heatmap(events, "Category", "Length", figures_dir / "category_by_length_heatmap.png").to_csv(
         output_dir / "category_by_length.csv"

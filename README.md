@@ -26,6 +26,7 @@ esa_adb_lite/
   docs/
     data_preparation.md         # Data source and preparation
     algorithm_alignment.md      # Official ESA-ADB classical alignment
+    autodl_full_run.md          # Full AutoDL run command and scope
     notebook_usage.md           # Notebook-first workflow
     project_structure.md        # File structure notes
 ```
@@ -129,6 +130,30 @@ Official-aligned classical benchmark:
   --vus-max-buffer 50 `
   --vus-max-thresholds 30
 ```
+
+All implemented algorithms with all enabled metrics:
+
+```powershell
+..\.venv\Scripts\python.exe run_benchmark.py ..\data\preprocessed `
+  --preset all `
+  --include-vus-metrics `
+  --vus-max-points 50000 `
+  --vus-max-buffer 50 `
+  --vus-max-thresholds 30 `
+  --official-binary-fraction 0.05 `
+  --official-merge-gap-points 30 `
+  --official-min-event-points 2
+```
+
+This run enables:
+
+- point-level metrics: `AUROC`, `AUPR`, `F1`
+- channel-mean metrics for per-channel algorithms: `ChannelMean_*`
+- ESA event-style metrics from `official_metrics.py`
+- VUS metrics: `VUS_PR`, `VUS_ROC`
+- anomaly feature slice metrics: `slice_metrics.csv`
+
+For feasible event-metric runtime, the full command merges predicted official-metric events separated by at most 30 sampled points and removes one-point fragments. These values are written to `run_config.json`.
 
 Targeted run:
 
@@ -234,6 +259,36 @@ python run_benchmark.py /root/autodl-tmp/data/preprocessed \
   --vus-max-thresholds 30
 ```
 
+Full AutoDL run with all algorithms and all metrics:
+
+```bash
+cd /root/esa-adb-lite
+bash scripts/autodl/run_autodl_all.sh
+```
+
+Equivalent explicit command:
+
+```bash
+python run_benchmark.py /root/autodl-tmp/data/preprocessed \
+  --preset all \
+  --output-dir /root/autodl-tmp/results_autodl \
+  --include-vus-metrics \
+  --vus-max-points 50000 \
+  --vus-max-buffer 50 \
+  --vus-max-thresholds 30 \
+  --official-binary-fraction 0.05 \
+  --official-merge-gap-points 30 \
+  --official-min-event-points 2
+```
+
+Do not add `--skip-official-metrics` for this run. The setup script clones the official ESA-ADB affiliation metric dependency to `/root/esa-adb-classical` when needed.
+
+Detailed full-run notes:
+
+```text
+docs/autodl_full_run.md
+```
+
 For `target` runs, avoid repeating algorithms already completed. Use `--algorithms` to run only missing algorithms, for example:
 
 ```bash
@@ -296,4 +351,25 @@ Summarize one or more slice metric files:
   results\<preset>\<timestamp>\slice_metrics.csv `
   --metric Point_AUPR `
   --output-dir results\slice_analysis
+```
+
+Rank algorithms by reliable anomaly slices:
+
+```powershell
+..\.venv\Scripts\python.exe scripts\tools\rank_slice_algorithms.py `
+  results\<preset>\<timestamp>\slice_metrics.csv `
+  --metric Point_AUPR `
+  --min-events 3 `
+  --output-dir results\slice_ranking_aupr_min3
+```
+
+Create presentation-ready benchmark figures:
+
+```powershell
+..\.venv\Scripts\python.exe scripts\visualization\plot_benchmark_report.py `
+  --run-dir results\<preset>\<timestamp> `
+  --output-dir results\<preset>\<timestamp>\presentation_figures `
+  --primary-metric Point_AUPR `
+  --secondary-metric Point_AUROC `
+  --min-events 3
 ```
